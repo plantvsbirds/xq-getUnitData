@@ -20,22 +20,38 @@ var weblog = (content) => {
 
 phantom.create(function (ph) {
   ph.createPage(function (page) {
+
     page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
+    
+
+    page.set('onResourceReceived', 
+        function(requestData, request) {
+          var log = function (obj) {
+            console.log(JSON.stringify(obj))
+          } 
+          if (requestData.url.indexOf('.json') === -1)
+            return
+          log('Requesting following JSON: ' + requestData.url)
+        }
+    );
 
     page.open("http://xueqiu.com/p/ZH087953", function (status) {
-      console.log("opened xq? ", status)
+      log('Hooking Rightaway.')
+
       page.evaluate(function () {
         window.results = []
 
         $(document).ajaxSuccess(
           function(event, xhr, settings) { 
-            window.results.push(xhr.responseText)
-          }
-        )
-
+            window.results.push({
+              res : xhr.responseText,
+              url : settings ? settings.url : 'fuck'
+            })
+            console.log(xhr.responseText)
+        })
         return $('body').html()
-      }, function (pageLoaded) {
-        log('page loaded' + pageLoaded)
+      }, function (pageHtml) {
+        log('Page load status: ' + !!pageHtml)
         //ph.exit()
       })
       let lastResultLength = 0
@@ -44,12 +60,10 @@ phantom.create(function (ph) {
         page.evaluate(function () {
           return JSON.stringify(window.results)
         }, function (res) {
-          log(res.length)
           var resultsArray = eval(res)
           //weblog(resultsArray)
           let resLength = resultsArray.length
-          log(resultsArray.length)
-          log('New check: '+ resLength)
+          log('Captured AJAX requests: #'+ resLength)
           if (resLength > lastResultLength) {
             lastResultLength = resLength
             readyToClearInterval = false
