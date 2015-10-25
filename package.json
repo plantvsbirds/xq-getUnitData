@@ -10,6 +10,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "phantom": "^0.8.0",
-    "phantomjs-promise": "0.0.1"
+    "phantomjs-promise": "0.0.1",
+    "prettyjson": "^1.1.3"
   }
 }

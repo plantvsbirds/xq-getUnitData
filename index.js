@@ -1,7 +1,10 @@
 'use strict'
 var phantom = require('phantom')
 
-var log = (obj) => console.log(JSON.stringify(obj, null, 4))
+var prettyjson = require('prettyjson')
+var log = (obj) => console.log(prettyjson.render(obj, {
+  
+}))
 var write = (obj) => process.stdout.write(JSON.stringify(obj))
 
 var rebalanceUrl = (unitId, count) =>
