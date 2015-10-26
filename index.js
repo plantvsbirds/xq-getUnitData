@@ -20,7 +20,8 @@ function ScraperForUnit(userDefinedSettings) {
   })
 }
 
-ScraperForUnit.prototype.scrap = (unitId) => {
+ScraperForUnit.prototype.scrap = (unitId) =>
+  new Promise((resolve, reject) => {
   var self = this
   phantom.create(function(ph) {
       ph.createPage(function(page) {
@@ -34,7 +35,7 @@ ScraperForUnit.prototype.scrap = (unitId) => {
             }
             if (requestData.url.indexOf('.json') === -1)
               return
-            write('[JSONPACK BOOM]')
+            //write('[JSONPACK BOOM]')
           });
 
         var replay = require('./replay')(page, self.settings)
@@ -43,18 +44,21 @@ ScraperForUnit.prototype.scrap = (unitId) => {
           Promise.all([
             replay(rebalanceUrl(unitId, 1), '')
               .then((firstButch) => replay(rebalanceUrl(unitId, firstButch.data.totalCount), 'rebalance_history'))
-
             , getMeta()
-
-            ])
-            .then((data) => {
+           ])
+          .then((data) => {
               log(data)
-            }).catch(console.log)
+              let ans = {}
+              data.forEach((item) => {
+                ans[item.tag] = item.data
+              })
+              resolve(ans)
+            }).catch(reject)
           })
         })
       })
 
-    }
+    })
 
     module.exports = (settings) => new ScraperForUnit(settings)
 
