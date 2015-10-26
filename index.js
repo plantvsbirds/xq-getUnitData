@@ -1,77 +1,86 @@
 'use strict'
 var phantom = require('phantom')
 
-var log = (obj) => console.log(JSON.stringify(obj))
+var prettyjson = require('prettyjson')
+var log = (obj) => console.log(prettyjson.render(obj, {
 
-var weblog = (content) => {
-  var http = require('http')
-  const PORT=8081 
+}))
+var write = (obj) => process.stdout.write(JSON.stringify(obj))
 
-  function handleRequest(request, response){
-      response.end(content)
+var rebalanceUrl = (unitId, count) =>
+  'http://xueqiu.com/cubes/rebalancing/history.json?cube_symbol=' + unitId + '&count=' + count + '&page=1'
+
+function ScraperForUnit(userDefinedSettings) {
+  this.settings = {
+    maxRetry: 3
   }
-
-  var server = http.createServer(handleRequest)
-
-  server.listen(PORT, function(){
-      console.log("Server listening on: http://localhost:%s", PORT)
+  Object.keys(this.settings).forEach((k) => {
+    if (userDefinedSettings[k])
+      this.settings[k] = userDefinedSettings[k]
   })
-}
+  return (unitId) =>
+    new Promise((resolve, reject) => {
+      var self = this
+      phantom.create(function(ph) {
+        ph.createPage(function(page) {
 
-phantom.create(function (ph) {
-  ph.createPage(function (page) {
-    page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
+          page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
 
-    page.open("http://xueqiu.com/p/ZH087953", function (status) {
-      console.log("opened xq? ", status)
-      page.evaluate(function () {
-        window.results = []
-
-        $(document).ajaxSuccess(
-          function(event, xhr, settings) { 
-            window.results.push(xhr.responseText)
-          }
-        )
-
-        return $('body').html()
-      }, function (pageLoaded) {
-        log('page loaded' + pageLoaded)
-        //ph.exit()
-      })
-      let lastResultLength = 0
-      let readyToClearInterval = false
-      let checkResultsArray = setInterval(function () {
-        page.evaluate(function () {
-          return JSON.stringify(window.results)
-        }, function (res) {
-          log(res.length)
-          var resultsArray = eval(res)
-          //weblog(resultsArray)
-          let resLength = resultsArray.length
-          log(resultsArray.length)
-          log('New check: '+ resLength)
-          if (resLength > lastResultLength) {
-            lastResultLength = resLength
-            readyToClearInterval = false
-          } else {
-            if (resLength == 0) return
-            if (resLength == lastResultLength) {
-              if (readyToClearInterval) {
-                clearInterval(checkResultsArray)
-                processData(resultsArray)
-                ph.exit()
+          page.set('onResourceReceived',
+            function(requestData, request) {
+              var log = function(obj) {
+                console.log(JSON.stringify(obj))
               }
-              else
-                readyToClearInterval = true
-            }
-          }
-        })
-      }, 10000)
-    })
-  })
-})
+              if (requestData.url.indexOf('.json') === -1)
+                return
+                //write('[JSONPACK BOOM]')
+            });
 
-var processData = (ajaxRequests) => {
-  console.log(ajaxRequests[0].url)
-  console.log(ajaxRequests[0].res)
+          var replay = require('./src/replay')(page, self.settings)
+          var getMeta = require('./src/unit-data.js')(page, self.settings)
+          page.open("http://xueqiu.com/p/" + unitId, function(status) {
+            Promise.all([
+              replay(rebalanceUrl(unitId, 1), '')
+              .then((firstButch) => replay(rebalanceUrl(unitId, firstButch.data.totalCount), 'rebalance_history')), getMeta()
+            ])
+              .then((data) => {
+                log(data)
+                let ans = {}
+                data.forEach((item) => {
+                  ans[item.tag] = item.data
+                })
+                resolve(ans)
+              }).catch(reject)
+          })
+        })
+      })
+
+    })
 }
+
+module.exports = (settings) => new ScraperForUnit(settings)
+
+
+var selfExec = () => {
+  log('Not called as a module. Getting data from default')
+  module.exports({
+
+  })('ZH087953').then(() => null)
+}
+
+if (!module.parent) {
+  selfExec()
+}
+
+/* TODO
+ * retry logic
+ * module solution : just return data as JSON(BSON-compatible)
+ * beanstalk
+ */
+
+
+/*
+ * module api:
+ *  logging : open, close, indent, color output
+ *  beanstalk watch
+ */
