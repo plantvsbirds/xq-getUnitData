@@ -36,8 +36,8 @@ function ScraperForUnit(userDefinedSettings) {
                 //write('[JSONPACK BOOM]')
             });
 
-          var replay = require('./replay')(page, self.settings)
-          var getMeta = require('./unit-data.js')(page, self.settings)
+          var replay = require('./src/replay')(page, self.settings)
+          var getMeta = require('./src/unit-data.js')(page, self.settings)
           page.open("http://xueqiu.com/p/" + unitId, function(status) {
             Promise.all([
               replay(rebalanceUrl(unitId, 1), '')
