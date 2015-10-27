@@ -41,8 +41,15 @@ function ScraperForUnit(userDefinedSettings) {
           var getMeta = require('./src/unit-data.js')(page, self.settings)
           page.open("http://xueqiu.com/p/" + unitId, function(status) {
             Promise.all([
-              replay(rebalanceUrl(unitId, 1), '')
-              .then((firstButch) => replay(rebalanceUrl(unitId, firstButch.data.totalCount), 'rebalance_history')), getMeta()
+              replay(rebalanceUrl(unitId, 1), 'rebalance_history')
+              .then((firstButch) => {
+                if (firstButch.data.totalCount > firstButch.data.count)
+                  return replay(rebalanceUrl(unitId, firstButch.data.totalCount), 'rebalance_history')
+                else {
+                  return firstButch
+                }
+              })
+              , getMeta()
             ])
               .then((data) => {
                 log(data)
@@ -66,7 +73,7 @@ var selfExec = () => {
   log('Not called as a module. Getting data from default')
   module.exports({
 
-  })('ZH087953').then(() => null)
+  })('ZH100000').then(() => null)
 }
 
 if (!module.parent) {
