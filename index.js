@@ -38,7 +38,7 @@ function ScraperForUnit(userDefinedSettings) {
             });
 
           var replay = require('./src/replay')(page, self.settings)
-          var getMeta = require('./src/unit-data.js')(page, self.settings)
+          var getVar = require('./src/getvar')(page, self.settings)
           page.open("http://xueqiu.com/p/" + unitId, function(status) {
             Promise.all([
               replay(rebalanceUrl(unitId, 1), 'rebalance_history')
@@ -49,7 +49,8 @@ function ScraperForUnit(userDefinedSettings) {
                   return firstButch
                 }
               })
-              , getMeta()
+              , getVar('SNB.cubeTreeData', 'current_stocks')
+              , getVar('SNB.cubeInfo', 'meta')
             ])
               .then((data) => {
                 log(data)
