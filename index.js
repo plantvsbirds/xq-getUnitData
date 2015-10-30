@@ -5,6 +5,8 @@ var prettyjson = require('prettyjson')
 var log = (obj) => console.log(prettyjson.render(obj, {
 
 }))
+var taim = require('taim')
+var xqTimestamp = () => Date.now()
 var write = (obj) => process.stdout.write(JSON.stringify(obj))
 
 var rebalanceUrl = (unitId, count) =>
@@ -12,14 +14,17 @@ var rebalanceUrl = (unitId, count) =>
 
 function ScraperForUnit(userDefinedSettings) {
   this.settings = {
-    maxRetry: 3
+    maxRetry: 3,
+    displayResult : false
   }
+  this.startTime = Date.now()
   Object.keys(this.settings).forEach((k) => {
     if (userDefinedSettings[k])
       this.settings[k] = userDefinedSettings[k]
   })
-  return (unitId) =>
+  return (unitId) => 
     new Promise((resolve, reject) => {
+  console.log('trigged')
       var self = this
       phantom.create(function(ph) {
         ph.createPage(function(page) {
@@ -36,6 +41,9 @@ function ScraperForUnit(userDefinedSettings) {
                 return
                 //write('[JSONPACK BOOM]')
             });
+          page.set('onResourceTimeout', function(request) {
+              console.log('Response (#' + request.id + '): ' + JSON.stringify(request));
+          });
 
           var replay = require('./src/replay')(page, self.settings)
           var getVar = require('./src/getvar')(page, self.settings)
@@ -49,18 +57,25 @@ function ScraperForUnit(userDefinedSettings) {
                   return firstButch
                 }
               })
+              , replay('http://xueqiu.com/cubes/nav_daily/all.json?cube_symbol='+unitId+'&since=1000006584000&until=' + xqTimestamp(), 
+	      'growth')
               , getVar('SNB.cubeTreeData', 'current_stocks')
               , getVar('SNB.cubeInfo', 'meta')
             ])
               .then((data) => {
-                log(data)
+                ph.exit()
+                if(self.settings.displayResult)
+                  log(data)
                 let ans = {}
                 data.forEach((item) => {
                   ans[item.tag] = item.data
                 })
+                ans.chinese_stock =  /^[A-Z][A-Z]\d{6}$/.test(ans.meta.last_rebalancing.holdings[0].stock_symbol)
+                ans.time = Date.now() - self.startTime
                 resolve(ans)
               }).catch(reject)
           })
+          page.onError = () => reject()
         })
       })
 
@@ -74,7 +89,7 @@ var selfExec = () => {
   log('Not called as a module. Getting data from default')
   module.exports({
 
-  })('ZH100000').then(() => null)
+  })('ZH141971').then((data) => console.log(data.time)).catch(console.log)
 }
 
 if (!module.parent) {
