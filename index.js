@@ -1,6 +1,6 @@
 'use strict'
 var phantom = require('phantom')
-
+var request = require('then-request')
 var prettyjson = require('prettyjson')
 var log = (obj) => console.log(prettyjson.render(obj, {
 
@@ -24,14 +24,30 @@ function ScraperForUnit(userDefinedSettings) {
   })
   return (unitId) => 
     new Promise((resolve, reject) => {
-  console.log('trigged')
       var self = this
-      phantom.create(function(ph) {
+      console.log('called!')
+      phantom.create('--proxy=proxy.crawlera.com:8010 --proxy-auth=ee70811e604e446c9bacda838d14d0f7: ',
+      function(ph) {
         ph.createPage(function(page) {
-
+	  setTimeout(() => {
+	    ph.exit();
+	    log("Reload.")
+	    return module.exports(userDefinedSettings)(unitId)
+	  }, 15000)
           page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
           page.set('settings.loadImages', false)
-
+          page.onResourceRequested(function (req) { try {
+	  if (req.url.indexOf('.css') >= 0) {
+	    req.changeUrl('http://localhost:10000/css')
+	    return
+	  }
+	  if (req.url.indexOf('.js') >= 0)
+	    req.changeUrl(req.url.replace(/assets\.imedao.com/g, 'localhost:10000'))
+	  
+	  
+	  console.log(req.url)
+	  
+	  } catch(e) {} })
           page.set('onResourceReceived',
             function(requestData, request) {
               var log = function(obj) {
@@ -44,10 +60,11 @@ function ScraperForUnit(userDefinedSettings) {
           page.set('onResourceTimeout', function(request) {
               console.log('Response (#' + request.id + '): ' + JSON.stringify(request));
           });
-
+          page.set('onResourceError', (err) => log(err))
           var replay = require('./src/replay')(page, self.settings)
           var getVar = require('./src/getvar')(page, self.settings)
           page.open("http://xueqiu.com/p/" + unitId, function(status) {
+	    log(status)
             Promise.all([
               replay(rebalanceUrl(unitId, 1), 'rebalance_history')
               .then((firstButch) => {
@@ -89,7 +106,7 @@ var selfExec = () => {
   log('Not called as a module. Getting data from default')
   module.exports({
 
-  })('ZH141971').then((data) => console.log(data.time)).catch(console.log)
+  })('ZH100027').then((data) => console.log(data.time)).catch(console.log)
 }
 
 if (!module.parent) {

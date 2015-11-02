@@ -22,13 +22,22 @@ var zhString = (offset) => {
 }
 
 var todo = new Array()
-for (let offset = 0; offset < 100000/*700071*/; offset ++) {
+for (let offset = 0; offset < 5000/*700071*/; offset ++) {
   todo.push(zhString(offset))
 }
 
 todo.reduce(function(cur, next) {
     return cur.then(function() {
-        return getUnit(next)
+      console.log('hi')
+        return getUnit(next).then(function (res) {
+	    console.log(JSON.stringify(res))
+	    return res
+	  }).then(function (res){
+	      console.log(JSON.stringify(res).length)
+	      return db.xq_unit_raw.insert(res).then((res) => console.log(JSON.stringify(res))).catch((err) =>
+	      console.log(err))
+	      
+	    }).catch((err) => console.log(err))
     });
 }, Promise.resolve()).then(function() {
     console.log('all executed')
