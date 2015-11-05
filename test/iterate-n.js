@@ -26,23 +26,28 @@ for (let offset = 2000; offset < 5000/*700071*/; offset ++) {
   todo.push(zhString(offset))
 }
 
-todo.reduce(function(cur, next) {
-    let _ = () => {
+var compTodo = new Array()
+while (todo.length > 0)
+  compTodo = compTodo.push(todo.splice(0,3))
+
+compTodo.reduce(function(cur, next) {
+    var _ = () => {
       console.log('hi',next)
-        return getUnit(next)
+        return Promise.all(next.map((n) => getUnit(n)))
 	  .then(function (res) {
 	    console.log(JSON.stringify(res))
 	    return res
 	  }, function () {
-	      return _()
+	    return _()
 	  })
 	  .catch((err) => console.log(err))
 	  .then(function (res){
 	    console.log(JSON.stringify(res).length)
-	    return db.xq_unit_raw.insert(res).then((res) => console.log(!!res))
-	    .catch((err) => console.log(err))
-	  }).catch((err) => console.log(err))
-    }
+	    return db.xq_unit_raw.insert(res).then((res) => console.log(JSON.stringify(res))).catch((err) =>
+	    console.log(err))
+	  })
+	  .catch((err) => console.log(err))
+    })
     return cur.then(_)
 }, Promise.resolve()).then(function() {
     console.log('all executed')
