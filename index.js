@@ -53,8 +53,7 @@ function ScraperForUnit(userDefinedSettings) {
        var getVar = require('./src/getvar')(page, self.settings)
 
        page.open("http://xueqiu.com/p/" + unitId, function(status) {
-         log(status)
-         log('page is on')
+         log('Page on')
          loaded = true
          setTimeout(() => {
            if (!loaded) {
@@ -110,3 +109,16 @@ var selfExec = () => {
 
 if (!module.parent)
   selfExec()
+
+process.on('exit', (code) => {
+  log('Exiting with code ' + code)
+  try {
+    ph.exit()
+
+    let exec = require('child_process').exec
+    exec('kill ' + ph.process.pid)
+
+  } catch (e) {
+
+  }
+})
