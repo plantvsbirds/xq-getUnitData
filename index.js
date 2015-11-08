@@ -22,8 +22,8 @@ function ScraperForUnit(userDefinedSettings) {
   return (unitId) => 
   new Promise((resolve, reject) => {
     var self = this
-    function retry() {
-     reject()
+    function rejectAndClean() {
+      reject()
    }
    //phantom.create('--proxy=proxy.crawlera.com:8010 --proxy-auth=ee70811e604e446c9bacda838d14d0f7: ',
    phantom.create(
@@ -36,7 +36,7 @@ function ScraperForUnit(userDefinedSettings) {
            return
          }
          ph.exit()
-         reject()
+         rejectAndClean()
        }, 20000)
        page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
        page.set('settings.loadImages', false)
@@ -47,7 +47,9 @@ function ScraperForUnit(userDefinedSettings) {
         },
         (err) => {
          if (err.toString().indexOf('Host assets.imedao.com not found') >= 0)
-           reject()
+           rejectAndClean()
+         if (err.toString().indexOf('server replied: Not Found') >= 0)
+           rejectAndClean()
        })
 
        var replay = require('./src/replay')(page, self.settings)
@@ -59,7 +61,7 @@ function ScraperForUnit(userDefinedSettings) {
          setTimeout(() => {
            if (!loaded) {
             ph.exit()
-            reject()
+            rejectAndClean()
           }
         }, 300000)
          Promise.all([
@@ -87,7 +89,7 @@ function ScraperForUnit(userDefinedSettings) {
           })
           ans.time = Date.now() - self.startTime
           resolve(converter(ans))
-        }).catch(reject)
+        }).catch(rejectAndClean)
       })
     })
   })

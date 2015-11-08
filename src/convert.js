@@ -1,4 +1,7 @@
 'use strict'
+
+var xqTimestamp = () => Date.now()
+
 module.exports = (ori) => {
   let ans = { }
   ans.id = ori.meta.symbol
@@ -50,5 +53,7 @@ module.exports = (ori) => {
   ans.month_revenue = ori.meta.monthly_gain
   ans.daily_revenue = ori.meta.daily_gain
   ans.net_profit = ori.meta.total_gain
+  ans.job_duration = ori.time
+  ans.job_done_at = xqTimestamp()
   return ans
 }
