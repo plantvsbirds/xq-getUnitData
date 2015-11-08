@@ -5,6 +5,7 @@ var prettyjson = require('prettyjson')
 var log = (obj) => console.log(prettyjson.render(obj, { }))
 var xqTimestamp = () => Date.now()
 var write = (obj) => process.stdout.write(JSON.stringify(obj))
+var converter = require('./src/convert')
 var rebalanceUrl = (unitId, count) =>
 'http://xueqiu.com/cubes/rebalancing/history.json?cube_symbol=' + unitId + '&count=' + count + '&page=1'
 
@@ -60,7 +61,7 @@ function ScraperForUnit(userDefinedSettings) {
             ph.exit()
             reject()
           }
-        },20000)
+        }, 300000)
          Promise.all([
           replay(rebalanceUrl(unitId, 1), 'rebalance_history')
           .then((firstButch) => {
@@ -84,9 +85,8 @@ function ScraperForUnit(userDefinedSettings) {
           data.forEach((item) => {
             ans[item.tag] = item.data
           })
-          ans.chinese_stock =  /^[A-Z][A-Z]\d{6}$/.test(ans.meta.last_rebalancing.holdings[0].stock_symbol)
           ans.time = Date.now() - self.startTime
-          resolve(ans)
+          resolve(converter(ans))
         }).catch(reject)
       })
     })
@@ -102,7 +102,10 @@ var selfExec = () => {
   module.exports({
 
   })(process.argv[2] || 'ZH100001')
-  .then((data) => console.log(data, data.time) , (err) => console.log(err))
+  .then((data) => {
+    log(data)
+    process.exit()
+  } , (err) => console.log(err))
   .catch(console.log)
 //102062
 }
@@ -114,10 +117,8 @@ process.on('exit', (code) => {
   log('Exiting with code ' + code)
   try {
     ph.exit()
-
     let exec = require('child_process').exec
     exec('kill ' + ph.process.pid)
-
   } catch (e) {
 
   }
