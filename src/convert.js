@@ -47,8 +47,8 @@ module.exports = (ori) => {
     }
   }).filter((reb) => (reb !== undefined))
   ans.raw_data = ori
-  ans.month_revenue = ori.monthly_gain
-  ans.daily_revenue = ori.daily_gain
-  ans.net_profit = ori.total_gain
+  ans.month_revenue = ori.meta.monthly_gain
+  ans.daily_revenue = ori.meta.daily_gain
+  ans.net_profit = ori.meta.total_gain
   return ans
 }

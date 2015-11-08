@@ -103,6 +103,7 @@ var selfExec = () => {
 
   })(process.argv[2] || 'ZH100001')
   .then((data) => {
+    data.raw_data = 'nothing'
     log(data)
     process.exit()
   } , (err) => console.log(err))
