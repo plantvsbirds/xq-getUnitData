@@ -23,6 +23,7 @@ function ScraperForUnit(userDefinedSettings) {
   new Promise((resolve, reject) => {
     var self = this
     function rejectAndClean() {
+      clean()
       reject()
    }
    //phantom.create('--proxy=proxy.crawlera.com:8010 --proxy-auth=ee70811e604e446c9bacda838d14d0f7: ',
@@ -116,8 +117,7 @@ var selfExec = () => {
 if (!module.parent)
   selfExec()
 
-process.on('exit', (code) => {
-  log('Exiting with code ' + code)
+var clean = () => {
   try {
     ph.exit()
     let exec = require('child_process').exec
@@ -125,4 +125,9 @@ process.on('exit', (code) => {
   } catch (e) {
 
   }
+}
+
+process.on('exit', (code) => {
+  log('Exiting with code ' + code)
+  clean()
 })
