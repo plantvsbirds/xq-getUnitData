@@ -6,8 +6,8 @@ var log = (obj) => console.log(prettyjson.render(obj, { }))
 var xqTimestamp = () => Date.now()
 var write = (obj) => process.stdout.write(JSON.stringify(obj))
 var converter = require('./src/convert')
-var rebalanceUrl = (unitId, count) =>
-'http://xueqiu.com/cubes/rebalancing/history.json?cube_symbol=' + unitId + '&count=' + count + '&page=1'
+var rebalanceUrl = (unitId, page) =>
+'http://xueqiu.com/cubes/rebalancing/history.json?cube_symbol=' + unitId + '&count=' + 20 + '&page=' + page
 
 function ScraperForUnit(userDefinedSettings) {
   this.settings = {
@@ -22,7 +22,8 @@ function ScraperForUnit(userDefinedSettings) {
   return (unitId) => 
   new Promise((resolve, reject) => {
     var self = this
-    function rejectAndClean() {
+    function rejectAndClean(reason) {
+      log(reason)
       clean()
       reject()
    }
@@ -38,7 +39,7 @@ function ScraperForUnit(userDefinedSettings) {
          }
          ph.exit()
          rejectAndClean()
-       }, 20000)
+       }, 200000)
        page.set('settings.userAgent', 'Mozilla/5.0 (Windows NT 6.1 WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36')
        page.set('settings.loadImages', false)
 
@@ -66,13 +67,31 @@ function ScraperForUnit(userDefinedSettings) {
           }
         }, 300000)
          Promise.all([
-          replay(rebalanceUrl(unitId, 1), 'rebalance_history')
-          .then((firstButch) => {
-            if (firstButch.data.totalCount > firstButch.data.count)
-              return replay(rebalanceUrl(unitId, firstButch.data.totalCount), 'rebalance_history')
-            else {
-              return firstButch
-            }
+          new Promise((resolve, reject) => {
+            replay(rebalanceUrl(unitId, 1), 'rebalance_history')
+            .then((firstButch) => {
+              log(firstButch.tag)
+              if (firstButch.data.page < firstButch.data.maxPage) {
+                let todo = []
+                for (let pageNum = 2; pageNum <= firstButch.data.maxPage; pageNum ++) {
+                  todo.push(replay(rebalanceUrl(unitId, pageNum), 'rebalance_history'))
+                }
+                Promise.all(todo).then((restButch) => {
+                  console.log('asdfasdfas')
+                  let ans = firstButch.data.list
+
+                  restButch.forEach((b) => {
+                    ans = ans.concat(b.data.list)
+                  })
+                  firstButch.data.list = ans
+                  resolve(firstButch)
+                }, (onRej) => {
+                  reject(onRej)
+                })
+              } else {
+                resolve(firstButch)
+              }
+            })
           })
           , replay('http://xueqiu.com/cubes/nav_daily/all.json?cube_symbol='+unitId+'&since=1000006584000&until=' + xqTimestamp(), 
            'growth')
@@ -98,7 +117,6 @@ function ScraperForUnit(userDefinedSettings) {
 }
 
 module.exports = (settings) => new ScraperForUnit(settings)
-
 
 var selfExec = () => {
   log('Not called as a module. Getting data from default')

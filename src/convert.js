@@ -1,6 +1,8 @@
 'use strict'
 
 var xqTimestamp = () => Date.now()
+var prettyjson = require('prettyjson')
+var log = (obj) => console.log(prettyjson.render(obj, { }))
 
 module.exports = (ori) => {
   let ans = { }
@@ -20,6 +22,7 @@ module.exports = (ori) => {
       ans.revenue_trend = ori.growth[0].list
   })
 
+log(ori.rebalance_history)
 
   ans.trade_timetable = ori.rebalance_history.list.map((oneReb) => {
 
